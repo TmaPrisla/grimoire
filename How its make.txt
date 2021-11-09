@@ -1,0 +1,197 @@
+Первый запуск сервера:
+
+Создаем новый проект, далее в папке проекта создаем папку виртуального окружения:
+python -m venv venv
+Переходим в созданную папку venv\Scripts и прописываем activate
+Отключаем venv при помощи deactivate
+Далее в Settings/PythonInterpreter выбираем нужный интерпритатор
+Устанавливаем pip intall django
+Создаем проект джанго: django-admin stratproject ... (вместо точек название сайта)
+Переходим в папку созданного проекта и вводим python manage.py runserver для запуска сервера
+
+Запуск первого приложения:
+Переходим в папку проекта и пишем python manage.py startapp shop
+Папка migrations в папке приложения для хранения миграций баз данных нашего приложения.
+Далее регистрируем приложение в проекте сайта:
+Переходим в файл settings.py в основной директории сайта и находим список INSTALLED_APPS 
+и пишем в него 'название апи' (в моем случае shop), а лучше прописать shop.apps.ShopConfig
+чтобы напрямую обращаться к классу конфигурации
+
+Создание обработчика главной страницы сайта:
+Представления в джанго можно реализовывать в виде функции или классов
+Все представления располагаются в файле shop/views.py
+Создаем функцию представления: 
+
+def index(request):
+	return HttpResponse('Страница приложения Shop')
+
+Теперь нам нужно связать функцию с соответсутвующим URL адресом
+Открываем grimoire/urls.py и в список urlpatterns добавляем новый маршрут используя функцию path
+path('shop/', index) предварительно импортировав from shop.views import index и указываем основную
+директорию grimoire через настройки как mark directory as source
+Для прописывания пути к главной странице в urls.py нужно указывать path('', index) 
+Но, когда пути прописываются в urls.py главной директории нарушает принцип независимости приложений
+Если мы захотим перенести текущее приложение на другой сайт нам придется прописывать все пути, что не очень
+удобно.
+С помощью функции include прописываем: 
+path('shop', include('shop.urls')), заранее импортировав его, а далее создаем в директории shop файл
+urls.py
+Содержание файла urls.py будет:
+from django.urls import path
+from .views import *
+
+urlspatterns = [
+	path('', index),
+]
+
+Создадим вывод категории по числовому индексу:
+Для этого в shop/urls.py укажем в
+path('cats/<int:catid>/', categories), где int-числа, catid- название параметра
+далее перйдем в views.py и укажем для categories
+def categories(request, catid):
+	return HttpResponse(f'<h1>Статьи по категориям</h1><p>{catid}</p>')
+
+Обработка get и post запросов:
+Если в файле views.py добавить к функции reques.GET, она сможет принимать get запросы, так же можно
+работать и с POST запросом.
+
+Обработка исключений при запросах к серверу:
+По автомату ответ 404 существует только в режиме дебага, которое изменяется в settings.py
+Чтобы изменять его нужно прописать в ALLOWED_HOSTS свой хост, пока что 127.0.0.1
+Чтобы описать функцию при ненахождении страницы переходим в views.py, создаем функцию pagenotfound
+
+def pagenotfound(requset, exception):
+    return HttpResponseNotFound('<h1>Страница не найдена</h1>') предварительно импортировав 
+HttpResponseNotFound
+Далее в файле grimoire/urls.py заглавной страницы добавим 
+handler404 = pagenotfound
+Функцию 404 можно использовать в допустим в случае исключений в разных функциях, к примеру 
+если не выполнено требование, вернуть ошибку 404, делается это при помощи Http404 которую нужно заранее
+импортировать к примеру:
+if int(year) > 2021
+	raise Http404()
+
+Создание 301 и 302 редиректов:
+301- страница перемещена на другой постоянный URL-адрес
+302- страница перемещена временно на другой URL- адрес
+Для этого используется функция django.shortcuts.redirect 
+к примеру можно использовать к случаю исключений
+if int(year) > 2021:
+	return redirect('/') 
+предварительно импортировав функцию redirect, в этом случае мы вызываем сценарий 302 редиректа
+но если нам нужен 301, то мы должны указать 
+if int(year) >2021:
+	return redirect('/', permanent=True)
+Прописывать явный адрес на который нужно перемещаться - плохая практика (хардкодинг), поэтому нужно 
+указывать имя URL адреса, к примеру:
+if int(year)>2020:
+	print redirect('home',permanent = False)
+и в файле shop/urls.py указать:
+path('', index, name='home')
+
+
+Модели данных. Миграции.
+Джанго может связываться с СУБД через ORM, т.е. с любым типом базы данных, а код будет оставаться 
+универсальным. По умолчанию джанго взаимодействует с sqlite.
+
+Далее устанавливаем sqlitestudio и создаем базу данных, по умолчанию в файле settings.py прописана 
+датабаза sqlite.
+При создании датабазы указываем путь к файлу db.sqlite3
+Создадим класс, хранящий в себе описание таблицы Shop для хранения информации.
+ 
+Открываем models.py и создаем класс:
+class Shop(models.Model):
+	title = models.CharField(max_lenght=255)
+	content = models.TextField(blank=True)
+	photo = models.ImageField(upload_to='photos/%Y/%m/%d/')
+	time_create = models.DateTimeField(auto_now_add=True)
+	time_update = models.DateTimeField(auto_now=True)
+	is_published = models.BooleanField(default=True)
+
+для корректной работы с изображениями нужно настроить MEDIA ROOT и MEDIA URL:
+в пакете конфигураций открываем settings.py в самом низу добавляем описание двух констант:
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+Далее в grimoire/urls.py пропишем:
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+Т.е. если мы в дебаге, то к urlpatterns прибавляется строка со статикой, все это делается 
+только в отладочном режиме
+
+Создаем таблицу через миграцию:
+Открываем терминал, выполняем команду находясь в папке корневой сайта:
+для начала python -m pip install Pillow
+далее python manage.py makemigrations
+тем самым в папке migrations создался файл 0001_initial.py далее 
+python manage.py sqlmigrate shop 0001 далее 
+python manage.py migrate
+
+
+
+
+ORM Django
+Для того чтобы войти в консоль ORM пропишем python manage.py shell
+Затем ипортируем from shop.models import Futbolki
+Чтобы создать новую запись в таблице пропишем:
+Futblki(title='....', content='....') т получим ответ object (none), далее присвоим переменной прошлое действие
+w1= _ а далее пропишем w1.save() для сохранения данного запроса
+Можно писать так:
+w2 = Futbolki()
+w2.title = '...'
+w2.content = '...'
+w2.save()
+Можно писать через менеджер:
+w3= Futbolki.objects.create('title='...', content='...') и запись сразу попадет в БД.
+А можно и без обьясвления переменной, т.е. Futbolki.objects.create(title='...', content='...')
+чтобы можно было просмотреть объекты в БД через консоль, файл models.py нужно добавить строку 
+
+def __str__(self):
+	return self.title
+
+После этого перезайти в shell и опять импортировать from shop.models import Futbolki
+и выполнить: Futbolki.objects.all()
+После этого мы можем присвоить переменной весь этот список, например через w4 = _ и обращаться к 
+нему по номеру записи w[1] или w[2], или обратиться к опеределенному полю через w[1].title
+Для того чтобы узнать кол-во записей используем len() примененное к данной переменной
+Для того чтобы отфильтровать БД по параметру, введем Futbolki.objects.filter(title='....')
+Чтобы посмотреть SQL запрос переданный по запросу, нужно сначала импортировать from django.db import connection
+а далее прописать connection.queries
+Для того чтобы фильтровать по больше или меньше, необходимы __gte(сравнение больше или равно >=)
+или _lte(сравнение меньше или равно <=), на деле это пишется так: Futbolki.objects.filter(pk__gte=2)
+Если нам нужно отфильтровать все записи, но исключая какой-то параметр, пользуемся exclude, к примеру:
+Futbolki.objects.exclude(pk=2)
+Чтобы достать определенную запись в БД правильно использовать get, к примеру:
+Futbolki.objects.get(pk=2)
+
+
+
+
+
+Подключение статических файлов:
+Выполняем команду для созхдания папки для статических файлов: python manage.py collectstatic
+В файле serttings.py прописать пути для STATIC_URL, STATIC_ROOT, STATICFILES_DIRS.
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = []
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media'
+
+Далее в папке апи shop создадим папку static и в ней подкаталог shop, а в нем папки css, images, js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

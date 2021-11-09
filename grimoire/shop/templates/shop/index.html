@@ -1,0 +1,42 @@
+{% extends 'shop/base.html' %}
+{% load static %}
+{% block content %}
+<style>
+.container1 {
+display: flex;
+}
+.container1 div {
+    padding: 10px;
+    border: 1px solid silver;
+}
+.box1 {
+flex: 1;
+}
+.box2 {
+flex: 1;
+}
+
+.box3 {
+flex: 1;
+}
+
+
+</style>
+
+<div class="container1">
+    <div class="box1">
+        <h3>Box1</h3>
+        <p>Lorem ipsum</p>
+
+
+    </div>
+    <div class="box2">
+        <h3>Box1</h3>
+        <p>Lorem ipsum</p>
+    </div>
+    <div class="box3">
+        <h3>Box1</h3>
+        <p>Lorem ipsum</p>
+    </div>
+</div>
+{% endblock %}
